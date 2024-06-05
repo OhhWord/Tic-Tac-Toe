@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        .container {
+            text-align: center;
+            margin-top: 50px;
+        }
+
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-gap: 5px;
+            margin-bottom: 20px;
+        }
+
+        .cell {
+            width: 100px;
+            height: 100px;
+            background-color: #eee;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 40px;
+            cursor: pointer;
+        }
+
+        .cell:hover {
+            background-color: #ddd;
+        }
+
+        .cell.X {
+            color: red;
+        }
+
+        .cell.O {
+            color: blue;
+        }
+
+        h1 {
+            font-family: Arial, sans-serif;
+        }
+
+        #restart-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div>
+            <button id="human-btn">Play against Human</button>
+            <button id="ai-btn">Play against AI</button>
+        </div>
+        <p id="turn-indicator"></p>
+        <div class="board">
+            <div class="cell" data-cell-index="0"></div>
+            <div class="cell" data-cell-index="1"></div>
+            <div class="cell" data-cell-index="2"></div>
+            <div class="cell" data-cell-index="3"></div>
+            <div class="cell" data-cell-index="4"></div>
+            <div class="cell" data-cell-index="5"></div>
+            <div class="cell" data-cell-index="6"></div>
+            <div class="cell" data-cell-index="7"></div>
+            <div class="cell" data-cell-index="8"></div>
+        </div>
+        <button id="restart-btn">Restart Game</button>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const board = document.querySelector('.board');
+            const cells = document.querySelectorAll('.cell');
+            const restartButton = document.getElementById('restart-btn');
+            const turnIndicator = document.getElementById('turn-indicator');
+            const humanBtn = document.getElementById('human-btn');
+            const aiBtn = document.getElementById('ai-btn');
+            let currentPlayer = 'X';
+            let gameActive = false;
+            let aiMode = false;
+
+            const winningConditions = [
+                [0, 1, 2],
+                [3, 4, 5],
+                [6, 7, 8],
+                [0, 3, 6],
+                [1, 4, 7],
+                [2, 5, 8],
+                [0, 4, 8],
+                [2, 4, 6]
+            ];
+
+            const handleCellClick = (e) => {
+                if (!gameActive) return;
+
+                const cell = e.target;
+                const cellIndex = parseInt(cell.getAttribute('data-cell-index'));
+
+                if (cell.textContent !== '') return;
+
+                cell.textContent = currentPlayer;
+                cell.classList.add(currentPlayer);
+                checkWin();
+                checkDraw();
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+                if (aiMode && currentPlayer === 'O') {
+                    setTimeout(() => {
+                        playAI();
+                    }, 500); // Delay AI move for 0.5 seconds
+                }
+
+                turnIndicator.textContent = `Player ${currentPlayer === 'X' ? 'X' : 'You'}'s turn`;
+            };
+
+            const checkWin = () => {
+                for (let condition of winningConditions) {
+                    const [a, b, c] = condition;
+                    if (
+                        cells[a].textContent === currentPlayer &&
+                        cells[b].textContent === currentPlayer &&
+                        cells[c].textContent === currentPlayer
+                    ) {
+                        gameActive = false;
+                        cells[a].style.backgroundColor = 'green';
+                        cells[b].style.backgroundColor = 'green';
+                        cells[c].style.backgroundColor = 'green';
+                        alert(`Player ${currentPlayer} wins!`);
+                        return;
+                    }
+                }
+            };
+
+            const checkDraw = () => {
+                let draw = true;
+                cells.forEach(cell => {
+                    if (cell.textContent === '') {
+                        draw = false;
+                    }
+                });
+
+                if (draw) {
+                    gameActive = false;
+                    alert("It's a draw!");
+                }
+            };
+
+            const restartGame = () => {
+                cells.forEach(cell => {
+                    cell.textContent = '';
+                    cell.style.backgroundColor = '#eee';
+                    cell.classList.remove('X', 'O');
+                });
+                gameActive = true;
+                currentPlayer = 'X';
+                turnIndicator.textContent = `Player ${currentPlayer}'s turn`;
+            };
+
+            const playAI = () => {
+                if (!gameActive) return; // Check if the game is still active
+                const bestMove = getBestMove();
+                cells[bestMove.index].textContent = 'O';
+                cells[bestMove.index].classList.add('O');
+                checkWin();
+                checkDraw();
+                currentPlayer = 'X';
+                turnIndicator.textContent = `Player ${currentPlayer}'s turn`;
+            };
+
+            const getBestMove = () => {
+                let bestMove;
+                let bestScore = -Infinity;
+                for (let i = 0; i < 9; i++) {
+                    if (cells[i].textContent === '') {
+                        cells[i].textContent = 'O';
+                        const score = minimax(cells, 0, false);
+                        cells[i].textContent = '';
+                        if (score > bestScore) {
+                            bestScore = score;                            bestMove = i;
+                        }
+                    }
+                }
+                return { index: bestMove };
+            };
+
+            const minimax = (board, depth, isMaximizing) => {
+                const result = checkResult(board);
+                if (result !== null) {
+                    return result.score;
+                }
+
+                if (isMaximizing) {
+                    let bestScore = -Infinity;
+                    for (let i = 0; i < 9; i++) {
+                        if (board[i].textContent === '') {
+                            board[i].textContent = 'O';
+                            const score = minimax(board, depth + 1, false);
+                            board[i].textContent = '';
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                } else {
+                    let bestScore = Infinity;
+                    for (let i = 0; i < 9; i++) {
+                        if (board[i].textContent === '') {
+                            board[i].textContent = 'X';
+                            const score = minimax(board, depth + 1, true);
+                            board[i].textContent = '';
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                    return bestScore;
+                }
+            };
+
+            const checkResult = (board) => {
+                for (let i = 0; i < winningConditions.length; i++) {
+                    const [a, b, c] = winningConditions[i];
+                    if (board[a].textContent && board[a].textContent === board[b].textContent && board[b].textContent === board[c].textContent) {
+                        return {
+                            score: board[a].textContent === 'O' ? 10 : -10
+                        };
+                    }
+                }
+                return null;
+            };
+
+            humanBtn.addEventListener('click', () => {
+                gameActive = true;
+                aiMode = false;
+                turnIndicator.textContent = `Player ${currentPlayer}'s turn`;
+            });
+
+            aiBtn.addEventListener('click', () => {
+                gameActive = true;
+                aiMode = true;
+                turnIndicator.textContent = `Player ${currentPlayer}'s turn`;
+            });
+
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+
+            restartButton.addEventListener('click', restartGame);
+            turnIndicator.textContent = 'Select game mode';
+        });
+    </script>
+</body>
+</html>
